@@ -245,7 +245,6 @@ def is_mm_compute_bound(M: int, K: int, N: int, dtype: torch.dtype) -> bool:
 def get_pad_cache():
     return torch._inductor.codecache.LocalCache()
 
-
 def get_cached_should_pad(key: str) -> bool:
     return get_pad_cache().lookup(key)
 
@@ -389,14 +388,18 @@ def should_pad_bench(*args, **kwargs):
     ):
         return _should_pad_bench(*args, **kwargs)
 
+def get_do_bench():
+    with dynamo_timed("pad_mm_benchmark_get_do_bench"):
+        return functools.partial(
+            torch._inductor.runtime.benchmarking.benchmarker.benchmark_gpu,
+            warmup=5,
+        )
 
 def _should_pad_bench(
     match, mat1: Tensor, mat2: Tensor, op, input: Optional[Tensor] = None
 ) -> bool:
-    do_bench = functools.partial(
-        torch._inductor.runtime.benchmarking.benchmarker.benchmark_gpu,
-        warmup=5,
-    )
+    do_bench = get_do_bench()
+
     m_padded_length = 0
     n_padded_length = 0
     with no_dispatch():
